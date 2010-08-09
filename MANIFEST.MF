@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+Main-Class: ImageConverter
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/ome-xml.jar
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/bio-formats.jar" sourcepath="/bio-formats/src
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/loci-common.jar
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/slf4j-api-1.6.1.jar
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/slf4j-log4j12-1.6.1.jar
+Class-Path: C:/Sun/SDK/jdk/jre/lib/ext/log4j-1.2.16.jar

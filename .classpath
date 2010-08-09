@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jre6"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/bio-formats.jar"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/ome-xml.jar"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/loci-common.jar"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/slf4j-log4j12-1.5.10.jar"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="C:/Sun/SDK/jdk/jre/lib/ext/slf4j-api-1.5.10.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
