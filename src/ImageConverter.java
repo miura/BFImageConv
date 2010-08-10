@@ -1,7 +1,12 @@
 //
 // ImageConverter.java
 //
-
+/* Modified for the output file name and tiff header for use by Ruben 
+ * by Kota Miura @ CMCI, EMBL
+ * 20100810
+ *
+ * 
+ */
 /*
 OME Bio-Formats package for reading and converting biological file formats.
 Copyright (C) 2005-@year@ UW-Madison LOCI and Glencoe Software, Inc.
@@ -364,6 +369,7 @@ public final class ImageConverter {
 								+ "--C" + lPad(cStr,2) 
 								+ ".ome.tif";
 			System.out.println(filenameRuben);
+			System.out.println(r);
 
 			
 			String channelName = retrieve.getChannelName(series, coordinates[1]);
