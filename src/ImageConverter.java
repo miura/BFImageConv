@@ -244,6 +244,7 @@ public final class ImageConverter {
 
         long s = System.currentTimeMillis();
         byte[] buf = reader.openBytes(i);
+        //Object plane = reader.openPlane(i, 0, 0, reader.getSizeX(), reader.getSizeY());
         byte[][] lut = reader.get8BitLookupTable();
         if (lut != null) {
           IndexColorModel model = new IndexColorModel(8, lut[0].length,
@@ -251,7 +252,8 @@ public final class ImageConverter {
           writer.setColorModel(model);
         }
         long m = System.currentTimeMillis();
-        writer.saveBytes(i, buf);
+        writer.saveBytes(i, buf); 
+        //writer.savePlane(i, plane);   //writing speed did not change much with this. 
         long e = System.currentTimeMillis();
         read += m - s;
         write += e - m;
