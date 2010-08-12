@@ -50,8 +50,11 @@ import loci.formats.ImageWriter;
 import loci.formats.MissingLibraryException;
 import loci.formats.in.OMETiffReader;
 import loci.formats.meta.DummyMetadata;
+import loci.formats.meta.IMetadata;
 import loci.formats.meta.MetadataRetrieve;
 import loci.formats.meta.MetadataStore;
+import loci.formats.ome.OMEXMLMetadata;
+import loci.formats.out.OMETiffWriter;
 import loci.formats.out.TiffWriter;
 import loci.formats.services.OMEXMLService;
 
@@ -229,7 +232,7 @@ public final class ImageConverter {
         "Sorry, conversion to multiple OME-TIFF files is not yet supported.");
       return false;
     }
-
+    
     int total = 0;
     int num = writer.canDoStacks() ? reader.getSeriesCount() : 1;
     long read = 0, write = 0;
@@ -244,11 +247,18 @@ public final class ImageConverter {
       total += numImages;
       for (int i=0; i<numImages; i++) {
         //writer.setId(FormatTools.getFilename(q, i, reader, out));
-    	  writer.setId(RubenFilename.getFilename(q, i, reader, out));  
+    	  writer.setId(RubenFilename.getFilename(q, i, reader, out));
+    	  IMetadata writermeta = (IMetadata) writer.getMetadataRetrieve();
+    	  System.out.println("Before: " + writermeta.getPixelsType(0));
+    	  writermeta.setPixelsType(ome.xml.model.enums.PixelType.UINT16, 0);
+    	  //writermeta.setPixelsType(ome.xml.model.enums.PixelType.INT16, 0);
+    	  System.out.println("After: " + writermeta.getPixelsType(0));
+
         if (compression != null) writer.setCompression(compression);
 
         long s = System.currentTimeMillis();
         byte[] buf = reader.openBytes(i);
+        
         //Object plane = reader.openPlane(i, 0, 0, reader.getSizeX(), reader.getSizeY());
         byte[][] lut = reader.get8BitLookupTable();
         if (lut != null) {
@@ -257,6 +267,7 @@ public final class ImageConverter {
           writer.setColorModel(model);
         }
         long m = System.currentTimeMillis();
+        convert12bitTo16bit(buf);
         writer.saveBytes(i, buf); 
         //writer.savePlane(i, plane);   //writing speed did not change much with this. 
         long e = System.currentTimeMillis();
@@ -297,105 +308,111 @@ public final class ImageConverter {
     return true;
   }
 
+  //little endian
+  public static void convert12bitTo16bit(byte[] buf){
+	  for (int i = 0; i < buf.length; i += 2)
+		  buf[i+1] = (byte)(buf[i+1] & 0x0F);
+  }
+  
   // -- Main method --
 
   public static void main(String[] args) throws FormatException, IOException {
-    if (!testConvert(new ImageWriter(), args)) System.exit(1);
-    System.exit(0);
+	  if (!testConvert(new ImageWriter(), args)) System.exit(1);
+	  System.exit(0);
   }
-  
-	static class RubenFilename {  
-		/** Patterns to be used when constructing a pattern for output filenames. */
-		public static final String SERIES_NUM = "%s";
-		public static final String SERIES_NAME = "%n";
-		public static final String CHANNEL_NUM = "%c";
-		public static final String CHANNEL_NAME = "%w";
-		public static final String Z_NUM = "%z";
-		public static final String T_NUM = "%t";
 
-		//out should end with path separator e.g."\"
-		public static String getFilename(int series, int image, IFormatReader r,
-				String out) throws FormatException, IOException
-				{
-			MetadataStore store = r.getMetadataStore();
-			MetadataRetrieve retrieve = store instanceof MetadataRetrieve ?
-					(MetadataRetrieve) store : new DummyMetadata();
+  static class RubenFilename {  
+	  /** Patterns to be used when constructing a pattern for output filenames. */
+	  public static final String SERIES_NUM = "%s";
+	  public static final String SERIES_NAME = "%n";
+	  public static final String CHANNEL_NUM = "%c";
+	  public static final String CHANNEL_NAME = "%w";
+	  public static final String Z_NUM = "%z";
+	  public static final String T_NUM = "%t";
 
-			//String filename = pattern.replaceAll(SERIES_NUM, String.valueOf(series));
+	  //out should end with path separator e.g."\"
+	  public static String getFilename(int series, int image, IFormatReader r,
+			  String out) throws FormatException, IOException
+			  {
+		  MetadataStore store = r.getMetadataStore();
+		  MetadataRetrieve retrieve = store instanceof MetadataRetrieve ?
+				  (MetadataRetrieve) store : new DummyMetadata();
 
-			String imageName = retrieve.getImageName(series);
-			System.out.println(imageName);
-			String wStr = getWellNumstring(imageName, "Well ", 5, ", Field");
-			String fStr = getWellNumstring(imageName, "Field ", 6, " (");
-			//System.out.println("extracted well: " + wStr);
-			//System.out.println("extracted field: " + fStr);			
-			if (imageName == null) imageName = "Series" + series;
-			imageName = imageName.replaceAll("/", "_");
-			imageName = imageName.replaceAll("\\\\", "_");
+				  //String filename = pattern.replaceAll(SERIES_NUM, String.valueOf(series));
 
-			//filename = filename.replaceAll(SERIES_NAME, imageName);
+				  String imageName = retrieve.getImageName(series);
+				  System.out.println(imageName);
+				  String wStr = getWellNumstring(imageName, "Well ", 5, ", Field");
+				  String fStr = getWellNumstring(imageName, "Field ", 6, " (");
+				  //System.out.println("extracted well: " + wStr);
+				  //System.out.println("extracted field: " + fStr);			
+				  if (imageName == null) imageName = "Series" + series;
+				  imageName = imageName.replaceAll("/", "_");
+				  imageName = imageName.replaceAll("\\\\", "_");
 
-			r.setSeries(series);
-			int[] coordinates = r.getZCTCoords(image);
+				  //filename = filename.replaceAll(SERIES_NAME, imageName);
 
-			//filename = filename.replaceAll(Z_NUM, String.valueOf(coordinates[0]));
-			//filename = filename.replaceAll(T_NUM, String.valueOf(coordinates[2]));
-			//filename = filename.replaceAll(CHANNEL_NUM, String.valueOf(coordinates[1]));
-			
-			String zStr = String.valueOf(coordinates[0]);
-			String tStr = String.valueOf(coordinates[2]);
-			String cStr = String.valueOf(coordinates[1]+1);			
+				  r.setSeries(series);
+				  int[] coordinates = r.getZCTCoords(image);
 
-			File xmlfile = new File(r.getCurrentFile());
-			String parentdir = xmlfile.getParentFile().getName();
-			//String grandParentpath = xmlfile.getParentFile().getParent()+xmlfile.separator;
-			
-			//System.out.println(grandParentpath);
-			out = out  
-					+ "W"
-					+ lPad(wStr, 4)
-					+ xmlfile.separator
-					+ "p" + lPad(fStr,3);
-			File subw = new File(out);
-			if (!subw.isDirectory()) subw.mkdirs();
-			out = out + xmlfile.separator;
-			 
-			
-			String filenameRuben =out + parentdir
-								+ "--W" + lPad(wStr, 4) 
-								+ "--P" + lPad(fStr,3)  
-								+ "--T" + lPad(tStr,5) 
-								+ "--Z" + lPad(zStr,3) 
-								+ "--C" + lPad(cStr,2) 
-								+ ".ome.tif";
-			System.out.println(filenameRuben);
-			System.out.println(r);
+				  //filename = filename.replaceAll(Z_NUM, String.valueOf(coordinates[0]));
+				  //filename = filename.replaceAll(T_NUM, String.valueOf(coordinates[2]));
+				  //filename = filename.replaceAll(CHANNEL_NUM, String.valueOf(coordinates[1]));
 
-			
-			String channelName = retrieve.getChannelName(series, coordinates[1]);
-			if (channelName == null) channelName = String.valueOf(coordinates[1]);
-			channelName = channelName.replaceAll("/", "_");
-			channelName = channelName.replaceAll("\\\\", "_");
+				  String zStr = String.valueOf(coordinates[0]);
+				  String tStr = String.valueOf(coordinates[2]);
+				  String cStr = String.valueOf(coordinates[1]+1);			
 
-			//filename = filename.replaceAll(CHANNEL_NAME, channelName);
-			//return filename;
-			return filenameRuben;
-		}
-		
-		public static String getWellNumstring(String imagename, String key1, int key1offset, String key2){
-			String wellnumstring = "";
-			int si = imagename.indexOf(key1);
-			int se = imagename.indexOf(key2); 
-			wellnumstring = imagename.substring(si + key1offset, se);			
-			return wellnumstring;
-		}
-		
-		public static String lPad(String n, int width){			
-			String s = n;
-			while (s.length()<width)
-				s = "0" + s;
-			return s;						
-		}
-	}
+				  File xmlfile = new File(r.getCurrentFile());
+				  String parentdir = xmlfile.getParentFile().getName();
+				  //String grandParentpath = xmlfile.getParentFile().getParent()+xmlfile.separator;
+
+				  //System.out.println(grandParentpath);
+				  out = out  
+				  + "W"
+				  + lPad(wStr, 4)
+				  + xmlfile.separator
+				  + "p" + lPad(fStr,3);
+				  File subw = new File(out);
+				  if (!subw.isDirectory()) subw.mkdirs();
+				  out = out + xmlfile.separator;
+
+
+				  String filenameRuben =out + parentdir
+				  + "--W" + lPad(wStr, 4) 
+				  + "--P" + lPad(fStr,3)  
+				  + "--T" + lPad(tStr,5) 
+				  + "--Z" + lPad(zStr,3) 
+				  + "--C" + lPad(cStr,2) 
+				  + ".ome.tif";
+				  System.out.println(filenameRuben);
+				  System.out.println(r);
+
+
+				  String channelName = retrieve.getChannelName(series, coordinates[1]);
+				  if (channelName == null) channelName = String.valueOf(coordinates[1]);
+				  channelName = channelName.replaceAll("/", "_");
+				  channelName = channelName.replaceAll("\\\\", "_");
+
+				  //filename = filename.replaceAll(CHANNEL_NAME, channelName);
+				  //return filename;
+				  return filenameRuben;
+			  }
+
+	  public static String getWellNumstring(String imagename, String key1, int key1offset, String key2){
+		  String wellnumstring = "";
+		  int si = imagename.indexOf(key1);
+		  int se = imagename.indexOf(key2); 
+		  wellnumstring = imagename.substring(si + key1offset, se);			
+		  return wellnumstring;
+	  }
+
+	  public static String lPad(String n, int width){			
+		  String s = n;
+		  while (s.length()<width)
+			  s = "0" + s;
+		  return s;						
+	  }
+  }
 
 }
